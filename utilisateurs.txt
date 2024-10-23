@@ -1,0 +1,3 @@
+john_doe:Marketing:/bin/bash:/home/john_doe
+jane_smith:RH:/bin/zsh:/home/jane_smith
+jordy:RH:/bin/zsh:/home/jordy
