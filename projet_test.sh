@@ -2,7 +2,6 @@
 
 # Variables
 liste_utilisateur="utilisateurs.txt"
-jours_inactivité=90
 
 # Fonction d'ajout ou modification d'utilisateur
 ajouter_modifier_utilisateur(){
@@ -38,22 +37,54 @@ ajouter_modifier_utilisateur(){
 }
 
 # Fonction de gestion des utilisateurs inactifs
-gerer_utilisateurs_inactifs() {
-    for utilisateur in $(lastlog -b "$jours_inactivité" | awk '{if (NR>1 && $4=="**Never") print $1}'); do
-        echo "ALERTE : L'utilisateur $utilisateur est inactif depuis plus de $jours_inactivité jours."
-        read -p "Voulez-vous verrouiller (v) ou supprimer (s) le compte de $utilisateur ? " choix
+backup_home_directory() {
+    user=$1
+    if [ -d "/home/$user" ]; then
+        echo "Sauvegarde du répertoire personnel de l'utilisateur $user..."
+        tar -czf "/backup/$user-home-$(date +%Y%m%d).tar.gz" "/home/$user"
+        echo "Sauvegarde terminée : /backup/$user-home-$(date +%Y%m%d).tar.gz"
+    else
+        echo "Répertoire personnel de l'utilisateur $user introuvable."
+    fi
+}
+gestion_user_inactif(){
+    if [ ! -d "/backup" ]; then
+        sudo mkdir /backup
+        echo "Répertoire de sauvegarde /backup créé."
+    fi
+    inactive_users=$(lastlog -b 0 | grep "Never logged in" | awk '{print $1}')
+    for user in $inactive_users; do
+        echo "L'utilisateur $user ne s'est jamais connecté."
+    echo "ALERTE : L'utilisateur $user est inactif."
 
-        if [[ $choix == "v" ]]; then
-            sudo chage -E 0 $utilisateur
-            echo "Le compte de l'utilisateur $utilisateur a été verrouillé."
-        elif [[ $choix == "s" ]]; then
-            sudo tar -zcvf /backup/${utilisateur}_home_backup.tar.gz /home/$utilisateur
-            echo "Le répertoire personnel de $utilisateur a été sauvegardé."
-            sudo userdel -r $utilisateur
-            echo "Le compte de $utilisateur a été supprimé."
-        else
-            echo "Option non reconnue, aucune action prise pour $utilisateur."
-        fi
+        # Proposer des options à l'administrateur
+        echo "Que souhaitez-vous faire avec le compte de $user ?"
+        echo "1) Verrouiller le compte"
+        echo "2) Supprimer le compte"
+        echo "3) Ne rien faire"
+        read -p "Entrez votre choix (1, 2, 3) : " choice
+
+        case $choice in
+            1)
+                # Verrouiller le compte
+                sudo usermod -L $user
+                echo "Le compte de l'utilisateur $user a été verrouillé."
+                ;;
+            2)
+                # Sauvegarder le répertoire personnel avant suppression
+                backup_home_directory $user
+
+                # Supprimer le compte
+                sudo userdel $user
+                echo "Le compte de l'utilisateur $user a été supprimé."
+                ;;
+            3)
+                echo "Aucune action n'a été effectuée pour $user."
+                ;;
+            *)
+                echo "Choix invalide. Aucune action n'a été effectuée pour $user."
+                ;;
+        esac
     done
 }
 
@@ -237,7 +268,7 @@ case $choix in
         done < "$liste_utilisateur"
         ;;
     2)
-        gerer_utilisateurs_inactifs
+        gestion_user_inactif
         ;;
     3)
         creer_groupe
