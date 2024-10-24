@@ -3,7 +3,9 @@
 # Variables
 liste_utilisateur="utilisateurs.txt"
 
+# Partie 1.
 # Fonction d'ajout ou modification d'utilisateur
+
 ajouter_modifier_utilisateur(){
     local utilisateur=$1
     local groupe=$2
@@ -36,9 +38,13 @@ ajouter_modifier_utilisateur(){
 
 }
 
-# Fonction de gestion des utilisateurs inactifs
+# Partie 2
 backup_home_directory() {
     user=$1
+    if [ ! -d "/backup" ]; then
+        sudo mkdir /backup
+        echo "Répertoire de sauvegarde /backup créé."
+    fi
     if [ -d "/home/$user" ]; then
         echo "Sauvegarde du répertoire personnel de l'utilisateur $user..."
         tar -czf "/backup/$user-home-$(date +%Y%m%d).tar.gz" "/home/$user"
@@ -47,16 +53,12 @@ backup_home_directory() {
         echo "Répertoire personnel de l'utilisateur $user introuvable."
     fi
 }
+# Fonction de gestion des utilisateurs inactifs
 gestion_user_inactif(){
-    if [ ! -d "/backup" ]; then
-        sudo mkdir /backup
-        echo "Répertoire de sauvegarde /backup créé."
-    fi
-    inactive_users=$(lastlog -b 0 | grep "Never logged in" | awk '{print $1}')
+    inactive_users=$(lastlog | grep "Never logged in" | awk '{print $1}')
     for user in $inactive_users; do
         echo "L'utilisateur $user ne s'est jamais connecté."
     echo "ALERTE : L'utilisateur $user est inactif."
-
         # Proposer des options à l'administrateur
         echo "Que souhaitez-vous faire avec le compte de $user ?"
         echo "1) Verrouiller le compte"
@@ -88,6 +90,7 @@ gestion_user_inactif(){
     done
 }
 
+# Partie 3.
 # Fonctions de gestion des groupes
 creer_groupe() {
     # Demander à l'utilisateur d'entrer un nom de groupe
@@ -95,7 +98,7 @@ creer_groupe() {
     read groupe
 
     # Vérifier si le groupe existe déjà
-    if getent group "$groupe" > /dev/null 2>&1; then
+    if getent group "$groupe" &>/dev/null; then
         echo "Le groupe $groupe existe déjà."
     else
         sudo groupadd "$groupe"
@@ -148,8 +151,10 @@ supprimer_groupe() {
     read groupe
 
     # Vérifier si le groupe existe et s'il est vide, puis le supprimer
-    if getent group "$groupe" > /dev/null 2>&1; then
-        if [ -z "$(getent passwd | grep ":$groupe")" ]; then
+    if getent group "$groupe" &>/dev/null; then
+        gid=$(getent group "$groupe" | cut -d: -f3)  # Récupérer le GID du groupe
+        # Vérifie si aucun user n'a ce gid en tant qu'id de groupe dans passwd et si c'est le cas :
+        if [ -z "$(getent passwd | awk -F: -v gid="$gid" '$4 == gid')" ]; then
             sudo groupdel "$groupe"
             echo "Le groupe $groupe a été supprimé car il est vide."
         else
@@ -160,20 +165,21 @@ supprimer_groupe() {
     fi
 }
 
-# Partie 4
-
+# Partie 4.
 # Fonction pour gérer les ACL sur des répertoires partagés
 gerer_acl() {
     echo "Entrez le répertoire pour lequel vous souhaitez configurer les ACL :"
     read repertoire
 
     # Vérifier si le répertoire existe
+    # -d vérifie si le chemin est un répertoire
     if [ -d "$repertoire" ]; then
         echo "1. Ajouter une ACL pour un utilisateur ou un groupe"
         echo "2. Supprimer une ACL pour un utilisateur ou un groupe"
         echo "3. Afficher les ACL actuelles"
         read -p "Choisissez une option (1-3) : " choix_acl
-
+        # Access control list : donner des perm avancées
+        # chmod en plus poussé
         case $choix_acl in
             1)
                 echo "Voulez-vous ajouter une ACL pour un utilisateur ou un groupe ? (u/g)"
@@ -184,6 +190,7 @@ gerer_acl() {
                 read permissions
 
                 if [[ "$type_entite" == "u" ]]; then
+                    # setfacl : permet de définir les permissions, -m permet de modifier
                     sudo setfacl -m u:$entite:$permissions "$repertoire"
                     echo "Les permissions ACL ont été appliquées à l'utilisateur $entite pour le répertoire $repertoire."
                 elif [[ "$type_entite" == "g" ]]; then
@@ -200,6 +207,7 @@ gerer_acl() {
                 read entite
 
                 if [[ "$type_entite" == "u" ]]; then
+                    # -x : pour supprimer
                     sudo setfacl -x u:$entite "$repertoire"
                     echo "Les permissions ACL pour l'utilisateur $entite ont été supprimées."
                 elif [[ "$type_entite" == "g" ]]; then
@@ -210,6 +218,7 @@ gerer_acl() {
                 fi
                 ;;
             3)
+                # getfacl : voir les perm d'un repertoire
                 sudo getfacl "$repertoire"
                 ;;
             *)
@@ -235,6 +244,7 @@ appliquer_acl_defaut() {
         read permissions
 
         if [[ "$type_entite" == "u" ]]; then
+            # -d -m: modifier les acl par défaut des prochains fichiers
             sudo setfacl -d -m u:$entite:$permissions "$repertoire"
             echo "Les ACL par défaut ont été appliquées à l'utilisateur $entite pour le répertoire $repertoire."
         elif [[ "$type_entite" == "g" ]]; then
@@ -251,7 +261,7 @@ appliquer_acl_defaut() {
 # Menu principal
 echo "Gestion des utilisateurs et des groupes"
 echo "1. Ajouter ou modifier un utilisateur"
-echo "2. Gérer les utilisateurs inactifs"
+echo "2. Gérer les utilisateurs inactifs et faire une sauvegarde"
 echo "3. Créer un groupe"
 echo "4. Ajouter un utilisateur à un groupe"
 echo "5. Retirer un utilisateur d'un groupe"
