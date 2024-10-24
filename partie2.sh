@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #Pour chaque utilisateur inactif
-jours_inactivité=1
-for utilisateur in $(lastlog -b $(jours_inactivité) | awk '{if (NR>1 && $4=="**Never") print $1}'); do
+jours_inactivite=1
+for utilisateur in $(lastlog -b $(jours_inactivite) | awk '{if (NR>1 && $4=="**Never") print $1}'); do
 
     # Générer une alerte
     echo "ALERTE : L'utilisateur $utilisateur est inactif depuis plus de 90 jours."
