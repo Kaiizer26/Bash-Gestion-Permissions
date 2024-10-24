@@ -2,7 +2,7 @@
 
 # Variables
 liste_utilisateur="utilisateurs.txt"
-jours_inactivité=90
+jours_inactivite=90
 
 # Fonction d'ajout ou modification d'utilisateur
 ajouter_modifier_utilisateur(){
@@ -39,8 +39,8 @@ ajouter_modifier_utilisateur(){
 
 # Fonction de gestion des utilisateurs inactifs
 gerer_utilisateurs_inactifs() {
-    for utilisateur in $(lastlog -b "$jours_inactivité" | awk '{if (NR>1 && $4=="**Never") print $1}'); do
-        echo "ALERTE : L'utilisateur $utilisateur est inactif depuis plus de $jours_inactivité jours."
+    for utilisateur in $(lastlog -b "$jours_inactivite" | awk '{if (NR>1 && $4=="**Never") print $1}'); do
+        echo "ALERTE : L'utilisateur $utilisateur est inactif depuis plus de $jours_inactivite jours."
         read -p "Voulez-vous verrouiller (v) ou supprimer (s) le compte de $utilisateur ? " choix
 
         if [[ $choix == "v" ]]; then
