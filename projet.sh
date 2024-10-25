@@ -46,8 +46,8 @@ backup_home_directory() {
         echo "Répertoire de sauvegarde /backup créé."
     fi
     if [ -d "/home/$user" ]; then
-        echo "Sauvegarde du répertoire personnel de l'utilisateur $user..."
-        tar -czf "/backup/$user-home-$(date +%Y%m%d).tar.gz" "/home/$user"
+        echo "Sau   vegarde du répertoire personnel de l'utilisateur $user..."
+        sudo tar -czf "/backup/$user-home-$(date +%Y%m%d).tar.gz" "/home/$user"
         echo "Sauvegarde terminée : /backup/$user-home-$(date +%Y%m%d).tar.gz"
     else
         echo "Répertoire personnel de l'utilisateur $user introuvable."
@@ -154,7 +154,7 @@ supprimer_groupe() {
     if getent group "$groupe" &>/dev/null; then
         gid=$(getent group "$groupe" | cut -d: -f3)  # Récupérer le GID du groupe
         # Vérifie si aucun user n'a ce gid en tant qu'id de groupe dans passwd et si c'est le cas :
-        if [ -z "$(getent passwd | awk -F: -v gid="$gid" '$4 == gid')" ]; then
+        if [ -z "$(getent group "$groupe" | cut -d: -f4)" ]; then
             sudo groupdel "$groupe"
             echo "Le groupe $groupe a été supprimé car il est vide."
         else

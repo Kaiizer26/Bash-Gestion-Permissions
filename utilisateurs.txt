@@ -6,3 +6,4 @@ johny_porke:RH:/bin/zsh:/home/johny_porke
 shaman:RH:/bin/zsh:/home/shaman
 johan:Marketing:/bin/zsh:/home/johan
 nathalie:Marketing:/bin/zsh:/home/nathalie
+manu:Marketing:/bin/zsh:/home/manu
